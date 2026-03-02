@@ -1,29 +1,21 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../src/app.module'; // Ajusta el path si es necesario
 import { ExpressAdapter } from '@nestjs/platform-express';
-import * as express from 'express';
-import * as morgan from 'morgan';
+import { AppModule } from '../app.module';
+import express from 'express'; // Cambio clave: importación por defecto
 
-const server = express();
-let cachedApp; // Cache para evitar reinicializar en cada cold start
+const server = express(); // Ahora sí es "callable"
 
-async function bootstrap() {
-  if (!cachedApp) {
-    const app = await NestFactory.create(AppModule, new ExpressAdapter(server));
-    app.use(morgan('dev')); // Logging
-    app.enableCors({
-      origin: '*', // Cambia a tu frontend en producción
-      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-      credentials: true,
-    });
-    await app.init();
-    cachedApp = app;
-  }
-  return server;
-}
+export const createVercelServer = async (expressInstance: any) => {
+  const app = await NestFactory.create(
+    AppModule,
+    new ExpressAdapter(expressInstance),
+  );
+  app.enableCors();
+  await app.init();
+  return app;
+};
 
-// Este es el handler que Vercel invoca
-export default async function handler(req: any, res: any) {
-  const app = await bootstrap();
-  app(req, res);
-}
+export default async (req: any, res: any) => {
+  await createVercelServer(server);
+  server(req, res);
+};
