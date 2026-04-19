@@ -1,22 +1,31 @@
+// src/ai/ai.controller.ts
 import {
   Controller,
   Post,
   Body,
-  UseGuards,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { AiService } from './ai.service';
+import { ProcessAiDto } from './dto/process-ai.dto';
 
 @Controller('ai')
 export class AiController {
+  private readonly logger = new Logger(AiController.name);
+
   constructor(private readonly aiService: AiService) {}
 
   @Post('process')
-  async processUserCommand(@Body('prompt') prompt: string) {
-    // <-- Verifica que 'prompt' no sea undefined
-    console.log('Prompt recibido:', prompt);
-    if (!prompt) throw new BadRequestException('El prompt está vacío');
+  async processUserCommand(@Body() data: ProcessAiDto) {
+    this.logger.log(`Recibiendo datos de n8n: ${JSON.stringify(data)}`);
 
-    return await this.aiService.executeCommand(prompt);
+    if (!data.prompt) {
+      throw new BadRequestException(
+        'El campo "prompt" es obligatorio para procesar la IA',
+      );
+    }
+
+    // Pasamos el prompt al servicio para que decida si es una factura o una orden
+    return await this.aiService.executeCommand(data.prompt);
   }
 }
